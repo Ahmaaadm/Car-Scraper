@@ -43,17 +43,23 @@ class IAAScraper:
                     chrome_options.binary_location = path
                     break
 
-            # Try webdriver-manager first, fallback to system chromedriver
-            try:
-                from webdriver_manager.chrome import ChromeDriverManager
-                service = Service(ChromeDriverManager().install())
-            except Exception:
-                # Fallback to local chromedriver
-                chromedriver_path = os.path.expanduser("~/.wdm/drivers/chromedriver/linux64/143.0.7499.192/chromedriver-linux64/chromedriver")
-                if not os.path.exists(chromedriver_path):
-                    chromedriver_path = "chromedriver"
-                service = Service(chromedriver_path)
+            # Use webdriver-manager and fix the path issue
+            from webdriver_manager.chrome import ChromeDriverManager
 
+            driver_path = ChromeDriverManager().install()
+
+            # Fix: webdriver-manager sometimes returns wrong file path
+            if 'THIRD_PARTY_NOTICES' in driver_path or not driver_path.endswith('chromedriver'):
+                driver_dir = os.path.dirname(driver_path)
+                chromedriver_path = os.path.join(driver_dir, 'chromedriver')
+                if os.path.exists(chromedriver_path):
+                    driver_path = chromedriver_path
+
+            # Make sure it's executable
+            if os.path.exists(driver_path):
+                os.chmod(driver_path, 0o755)
+
+            service = Service(driver_path)
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
         return self.driver
 
