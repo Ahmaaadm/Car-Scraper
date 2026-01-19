@@ -3,12 +3,14 @@ from bs4 import BeautifulSoup
 import re
 import time
 import os
+import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 class IAAScraper:
@@ -20,7 +22,7 @@ class IAAScraper:
         os.makedirs(output_dir, exist_ok=True)
 
     def _init_driver(self):
-        """Initialize Selenium Chrome driver"""
+        """Initialize Selenium Chrome driver - works on Windows, Mac, and Linux"""
         if self.driver is None:
             chrome_options = Options()
             chrome_options.add_argument("--headless")
@@ -30,34 +32,36 @@ class IAAScraper:
             chrome_options.add_argument("--window-size=1920,1080")
             chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-            # Check for Chrome in different locations
-            chrome_paths = [
-                "/usr/bin/google-chrome-stable",  # Arch Linux
-                "/usr/bin/google-chrome",          # Ubuntu/Debian
-                "/usr/bin/chromium-browser",       # Chromium
-                "/usr/bin/chromium",               # Alpine
-            ]
+            # Set Chrome binary location based on OS
+            system = platform.system()
 
-            for path in chrome_paths:
-                if os.path.exists(path):
-                    chrome_options.binary_location = path
-                    break
+            if system == "Linux":
+                chrome_paths = [
+                    "/usr/bin/google-chrome-stable",
+                    "/usr/bin/google-chrome",
+                    "/usr/bin/chromium-browser",
+                    "/usr/bin/chromium",
+                ]
+                for path in chrome_paths:
+                    if os.path.exists(path):
+                        chrome_options.binary_location = path
+                        break
 
-            # Use webdriver-manager and fix the path issue
-            from webdriver_manager.chrome import ChromeDriverManager
+            # Windows and Mac: Chrome is auto-detected, no need to set path
 
+            # Get chromedriver using webdriver-manager
             driver_path = ChromeDriverManager().install()
 
-            # Fix: webdriver-manager sometimes returns wrong file path
-            if 'THIRD_PARTY_NOTICES' in driver_path or not driver_path.endswith('chromedriver'):
-                driver_dir = os.path.dirname(driver_path)
-                chromedriver_path = os.path.join(driver_dir, 'chromedriver')
-                if os.path.exists(chromedriver_path):
-                    driver_path = chromedriver_path
-
-            # Make sure it's executable
-            if os.path.exists(driver_path):
-                os.chmod(driver_path, 0o755)
+            # Fix: webdriver-manager sometimes returns wrong file path on Linux
+            if system == "Linux":
+                if 'THIRD_PARTY_NOTICES' in driver_path or not driver_path.endswith('chromedriver'):
+                    driver_dir = os.path.dirname(driver_path)
+                    chromedriver_path = os.path.join(driver_dir, 'chromedriver')
+                    if os.path.exists(chromedriver_path):
+                        driver_path = chromedriver_path
+                # Make executable on Linux
+                if os.path.exists(driver_path):
+                    os.chmod(driver_path, 0o755)
 
             service = Service(driver_path)
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
