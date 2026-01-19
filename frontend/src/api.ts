@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { ScrapeResult } from './types';
 
-const API_BASE = 'https://car-scraper-ev8b.onrender.com/api';
+const API_BASE = 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE,
