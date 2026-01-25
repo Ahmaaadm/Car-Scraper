@@ -51,8 +51,9 @@ class IAAScraper:
 
             # Get chromedriver using webdriver-manager
             driver_path = ChromeDriverManager().install()
+            print(f"[DEBUG] Platform: {system}, Initial driver path: {driver_path}")
 
-            # Fix: webdriver-manager sometimes returns wrong file path on Linux
+            # Fix: webdriver-manager sometimes returns wrong file path
             if system == "Linux":
                 if 'THIRD_PARTY_NOTICES' in driver_path or not driver_path.endswith('chromedriver'):
                     driver_dir = os.path.dirname(driver_path)
@@ -62,7 +63,17 @@ class IAAScraper:
                 # Make executable on Linux
                 if os.path.exists(driver_path):
                     os.chmod(driver_path, 0o755)
+            elif system == "Windows":
+                # Fix: webdriver-manager may return wrong path on Windows
+                if 'THIRD_PARTY_NOTICES' in driver_path or not driver_path.endswith('.exe'):
+                    driver_dir = os.path.dirname(driver_path)
+                    chromedriver_path = os.path.join(driver_dir, 'chromedriver.exe')
+                    if os.path.exists(chromedriver_path):
+                        driver_path = chromedriver_path
+                        print(f"[DEBUG] Fixed driver path to: {driver_path}")
 
+            print(f"[DEBUG] Final driver path: {driver_path}")
+            print(f"[DEBUG] Driver exists: {os.path.exists(driver_path)}")
             service = Service(driver_path)
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
         return self.driver
